@@ -1,0 +1,50 @@
+
+name: Gemini Chatbot Session
+
+on:
+  workflow_dispatch:
+    inputs:
+      session_id:
+        description: "Visitor session ID"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chatbot-${{ inputs.session_id }}
+  cancel-in-progress: false
+
+jobs:
+  browser:
+    name: Browser Session
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        working-directory: runner
+        run: npm install
+
+      - name: Install Chrome
+        working-directory: runner
+        run: npx playwright install --with-deps chromium
+
+      - name: Start browser session
+        working-directory: runner
+        env:
+          SESSION_ID: ${{ inputs.session_id }}
+          WORKER_URL: ${{ vars.WORKER_URL }}
+          RUNNER_SHARED_SECRET: ${{ secrets.RUNNER_SHARED_SECRET }}
+          CUSTOM_INSTRUCTIONS: ${{ vars.CUSTOM_INSTRUCTIONS }}
+          GEMINI_STORAGE_STATE: ${{ secrets.GEMINI_STORAGE_STATE }}
+        run: npm start
